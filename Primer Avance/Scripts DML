@@ -30,13 +30,13 @@ INSERT INTO proveedores (
 )
 VALUES
 (
-    'Distribuidora La Económica',
-    '9999-1111',
-    'ventas@economica.com',
+    'Distribuidora La Bendicion',
+    '9999-1131',
+    'ventas@bendicion.com',
     'Tegucigalpa'
 ),
 (
-    'Alimentos Catrachos S.A.',
+    'Alimentos Catrachos',
     '9999-2222',
     'contacto@catrachos.com',
     'San Pedro Sula'
@@ -63,23 +63,23 @@ INSERT INTO usuarios (
 )
 VALUES
 (
-    'Ana Martínez',
-    'ana.martinez@mialmacen.com',
-    'amartinez',
+    'ingrid.sauceda',
+    'ingrid.sauceda@mialmacen.com',
+    'isauceda',
     'Administrador',
     TRUE
 ),
 (
-    'Carlos López',
-    'carlos.lopez@mialmacen.com',
-    'clopez',
+    'Andrea.Nicolle',
+    'Andrea.Nicolle@mialmacen.com',
+    'anicolle',
     'Vendedor',
     TRUE
 ),
 (
-    'María Gómez',
-    'maria.gomez@mialmacen.com',
-    'mgomez',
+    'mario.velasquez',
+    'mario.velasquez@mialmacen.com',
+    'mvelasquez',
     'Vendedor',
     TRUE
 );
