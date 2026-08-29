@@ -1,1 +1,306 @@
+USE almacen_db;
 
+INSERT INTO categorias (
+    nombre,
+    descripcion
+)
+VALUES
+(
+    'Limpieza',
+    'Productos para limpieza del hogar y oficina'
+),
+(
+    'Alimentos',
+    'Productos alimenticios de consumo general'
+),
+(
+    'Electrónica',
+    'Accesorios y dispositivos electrónicos'
+),
+(
+    'Papelería',
+    'Artículos escolares y de oficina'
+);
+
+INSERT INTO proveedores (
+    nombre_razon_social,
+    telefono,
+    correo,
+    direccion_ciudad
+)
+VALUES
+(
+    'Distribuidora La Económica',
+    '9999-1111',
+    'ventas@economica.com',
+    'Tegucigalpa'
+),
+(
+    'Alimentos Catrachos S.A.',
+    '9999-2222',
+    'contacto@catrachos.com',
+    'San Pedro Sula'
+),
+(
+    'TecnoHonduras',
+    '9999-3333',
+    'ventas@tecnohonduras.com',
+    'Tegucigalpa'
+),
+(
+    'Papelería El Estudiante',
+    '9999-4444',
+    'ventas@elestudiante.com',
+    'Tegucigalpa'
+);
+
+INSERT INTO usuarios (
+    nombre_completo,
+    correo,
+    username,
+    rol,
+    estado
+)
+VALUES
+(
+    'Ana Martínez',
+    'ana.martinez@mialmacen.com',
+    'amartinez',
+    'Administrador',
+    TRUE
+),
+(
+    'Carlos López',
+    'carlos.lopez@mialmacen.com',
+    'clopez',
+    'Vendedor',
+    TRUE
+),
+(
+    'María Gómez',
+    'maria.gomez@mialmacen.com',
+    'mgomez',
+    'Vendedor',
+    TRUE
+);
+
+INSERT INTO productos (
+    nombre,
+    descripcion,
+    sku,
+    precio_compra,
+    precio_venta,
+    stock_minimo,
+    estado,
+    id_categoria,
+    id_proveedor
+)
+VALUES
+(
+    'Detergente Líquido 1L',
+    'Detergente líquido para ropa',
+    'LIM-001',
+    55.00,
+    75.00,
+    10,
+    TRUE,
+    1,
+    1
+),
+(
+    'Arroz 5 lb',
+    'Arroz blanco en presentación de 5 libras',
+    'ALI-001',
+    85.00,
+    110.00,
+    15,
+    TRUE,
+    2,
+    2
+),
+(
+    'Audífonos Bluetooth',
+    'Audífonos inalámbricos con conexión Bluetooth',
+    'ELE-001',
+    250.00,
+    350.00,
+    5,
+    TRUE,
+    3,
+    3
+),
+(
+    'Cuaderno Universitario',
+    'Cuaderno de 100 hojas',
+    'PAP-001',
+    35.00,
+    50.00,
+    10,
+    TRUE,
+    4,
+    4
+),
+(
+    'Jabón de Manos 500ml',
+    'Jabón líquido para manos',
+    'LIM-002',
+    40.00,
+    60.00,
+    8,
+    TRUE,
+    1,
+    1
+);
+
+INSERT INTO movimientos_inventario (
+    id_producto,
+    tipo_movimiento,
+    cantidad,
+    fecha_hora,
+    observaciones,
+    id_usuario
+)
+VALUES
+(
+    1,
+    'E',
+    50,
+    '2026-08-20 08:30:00',
+    'Compra a proveedor',
+    1
+),
+(
+    2,
+    'E',
+    40,
+    '2026-08-20 09:00:00',
+    'Compra a proveedor',
+    1
+),
+(
+    3,
+    'E',
+    20,
+    '2026-08-21 10:00:00',
+    'Compra a proveedor',
+    1
+),
+(
+    4,
+    'E',
+    60,
+    '2026-08-21 11:00:00',
+    'Compra a proveedor',
+    1
+),
+(
+    5,
+    'E',
+    30,
+    '2026-08-22 08:45:00',
+    'Compra a proveedor',
+    1
+);
+
+INSERT INTO movimientos_inventario (
+    id_producto,
+    tipo_movimiento,
+    cantidad,
+    fecha_hora,
+    observaciones,
+    id_usuario
+)
+VALUES
+(
+    1,
+    'S',
+    8,
+    '2026-08-23 10:15:00',
+    'Venta mostrador',
+    2
+),
+(
+    2,
+    'S',
+    5,
+    '2026-08-23 11:30:00',
+    'Venta mostrador',
+    2
+),
+(
+    3,
+    'S',
+    3,
+    '2026-08-24 14:00:00',
+    'Venta mostrador',
+    3
+),
+(
+    4,
+    'S',
+    10,
+    '2026-08-24 15:20:00',
+    'Venta mostrador',
+    2
+),
+(
+    5,
+    'S',
+    4,
+    '2026-08-25 09:40:00',
+    'Venta mostrador',
+    3
+);
+
+SELECT *
+FROM categorias;
+
+SELECT *
+FROM proveedores;
+
+SELECT *
+FROM usuarios;
+
+SELECT *
+FROM productos;
+
+SELECT *
+FROM movimientos_inventario;
+
+SELECT
+    p.id_producto,
+    p.nombre,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN m.tipo_movimiento = 'E' THEN m.cantidad
+                WHEN m.tipo_movimiento = 'S' THEN -m.cantidad
+            END
+        ),
+        0
+    ) AS stock_actual
+FROM productos AS p
+LEFT JOIN movimientos_inventario AS m
+    ON p.id_producto = m.id_producto
+GROUP BY
+    p.id_producto,
+    p.nombre
+ORDER BY
+    p.id_producto;
+
+SELECT
+    p.id_producto,
+    p.nombre AS producto,
+    p.sku,
+    c.nombre AS categoria,
+    pr.nombre_razon_social AS proveedor,
+    p.precio_compra,
+    p.precio_venta,
+    p.stock_minimo
+FROM productos AS p
+INNER JOIN categorias AS c
+    ON p.id_categoria = c.id_categoria
+LEFT JOIN proveedores AS pr
+    ON p.id_proveedor = pr.id_proveedor
+ORDER BY
+    p.id_producto;
