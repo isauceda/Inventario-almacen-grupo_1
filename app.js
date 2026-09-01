@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
-const mysql = require('mysql2');
+//const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 const PORT = 3000;
 
 const pool = mysql.createPool({
@@ -8,16 +9,18 @@ const pool = mysql.createPool({
     user: 'root',
     password: 'Oapj_1804.',
     database: 'almacen_db'
+  
 });
 
-pool.getConnection((error, conexion)=>{
-    if(error){
-        console.log('Error de conexion con la bd...');
-    } 
+ pool.getConnection((error, conexion)=>{
+     if(error){
+         console.log('Error de conexion con la bd...');
+     } 
     else{
         console.log('conexion con la bd exitosa');
     }
-});
+ });
+
 
 app.use(express.json());
 
@@ -66,6 +69,64 @@ app.get('/api/productos/:id', (req, res) => {
         }
     });
 });
+
+
+// 2. ENDPOINT POST: CREAR PRODUCTO
+
+app.post('/api/productos', async (req, res) => {
+    try {
+        // 
+        const { nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id } = req.body;
+
+        // 2. VALIDACIONES (Retornan 400 Bad Request si fallan)
+        
+        // A. Validar campos obligatorios vacíos o inexistentes
+        if (!nombre || !sku || !estado) {
+            return res.status(400).json({ 
+                error: 'Bad Request',
+                mensaje: 'Los campos nombre, sku y estado son obligatorios y no pueden estar vacíos.' 
+            });
+        }
+
+        // B. Validar que los precios sean mayores a 0
+        if (precio_compra <= 0 || precio_venta <= 0) {
+            return res.status(400).json({ 
+                error: 'Bad Request',
+                mensaje: 'El precio de compra y el precio de venta deben ser mayores a 0.' 
+            });
+        }
+
+        // C. Validar que el estado sea correcto (opcional pero recomendado)
+        if (estado !== 'activo' && estado !== 'inactivo') {
+            return res.status(400).json({ 
+                error: 'Bad Request',
+                mensaje: 'El estado solo permite los valores: "activo" o "inactivo".' 
+            });
+        }
+
+        // 3. INSERCIÓN EN BASE DE DATOS
+        const query = `INSERT INTO Productos 
+                      (nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                       
+        const [resultado] = await pool.execute(query, [
+            nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id
+        ]);
+        
+        // 4. RESPUESTA DE ÉXITO (Retorna 201 Created)
+        res.status(201).json({ 
+            mensaje: 'Producto registrado con éxito', 
+            id_producto: resultado.insertId 
+        });
+
+    } catch (error) {
+        // Manejo de errores inesperados (ej. base de datos apagada, error de sintaxis SQL)
+        console.error(error);
+        res.status(500).json({ error: 'Error interno del servidor al crear el producto' });
+    }
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`El servidor está escuchando en: http://localhost:${PORT}`);
