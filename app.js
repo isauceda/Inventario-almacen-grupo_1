@@ -126,7 +126,98 @@ app.post('/api/productos', async (req, res) => {
     }
 });
 
+// Actualizar producto
+app.put('/api/productos/:id', (req, res) => {
+    const id = req.params.id;
 
+    const {
+        nombre,
+        descripcion,
+        sku,
+        precio_compra,
+        precio_venta,
+        stock_minimo,
+        estado,
+        id_categoria,
+        id_proveedor
+    } = req.body;
+
+    const sql = `
+        UPDATE productos
+        SET nombre = ?,
+            descripcion = ?,
+            sku = ?,
+            precio_compra = ?,
+            precio_venta = ?,
+            stock_minimo = ?,
+            estado = ?,
+            id_categoria = ?,
+            id_proveedor = ?
+        WHERE id_producto = ?
+    `;
+
+    const params = [
+        nombre,
+        descripcion,
+        sku,
+        precio_compra,
+        precio_venta,
+        stock_minimo,
+        estado,
+        id_categoria,
+        id_proveedor,
+        id
+    ];
+
+    pool.query(sql, params, (err, result) => {
+        if (err) {
+            res.status(500).json({
+                status: 500,
+                message: "Ocurrio un error al actualizar el producto"
+            });
+        } else if (result.affectedRows === 0) {
+            res.status(404).json({
+                status: 404,
+                message: "Producto no encontrado"
+            });
+        } else {
+            res.status(200).json({
+                status: 200,
+                message: "Producto actualizado correctamente"
+            });
+        }
+    });
+});
+
+// Eliminacion
+app.delete('/api/productos/:id', (req, res) => {
+    const id = req.params.id;
+
+    const sql = `
+        UPDATE productos
+        SET estado = 'INACTIVO'
+        WHERE id_producto = ?
+    `;
+
+    pool.query(sql, [id], (err, result) => {
+        if (err) {
+            res.status(500).json({
+                status: 500,
+                message: "Ocurrio un error al eliminar el producto"
+            });
+        } else if (result.affectedRows === 0) {
+            res.status(404).json({
+                status: 404,
+                message: "Producto no encontrado"
+            });
+        } else {
+            res.status(200).json({
+                status: 200,
+                message: "Producto eliminado correctamente"
+            });
+        }
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`El servidor está escuchando en: http://localhost:${PORT}`);
