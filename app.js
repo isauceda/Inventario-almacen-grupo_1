@@ -1,7 +1,6 @@
 const express = require('express');
 const app = express();
-//const mysql = require('mysql2');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise')
 const PORT = 3000;
 
 const pool = mysql.createPool({
@@ -12,79 +11,97 @@ const pool = mysql.createPool({
   
 });
 
- pool.getConnection((error, conexion)=>{
-     if(error){
-         console.log('Error de conexion con la bd...');
-     } 
-    else{
-        console.log('conexion con la bd exitosa');
+(async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('Conexión con la BD exitosa');
+        connection.release();
+    } catch (error) {
+        console.error('Error de conexión con la BD...', error);
     }
- });
+})();
 
 
 app.use(express.json());
 
 // Listar productos con filtros opcionales
-app.get('/api/productos', (req, res) => {
-    let sql = "SELECT id_producto, nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, id_categoria, id_proveedor FROM productos WHERE 1=1";
-    const params = [];
+app.get('/api/productos', async (req, res) => {
+    try {
+        let sql = `
+            SELECT id_producto, nombre_producto, descripcion, sku, 
+                   precio_compra, precio_venta, stock_minimo, estado, 
+                   id_categoria, id_proveedor 
+            FROM Productos 
+            WHERE 1=1
+        `;
+        const params = [];
 
-    if (req.query.estado) {
-        sql += " AND estado = ?";
-        params.push(req.query.estado);
-    }
-
-    if (req.query.category_id) {
-        sql += " AND id_categoria = ?";
-        params.push(req.query.category_id);
-    }
-
-    if (req.query.busqueda) {
-        sql += " AND (nombre LIKE ? OR sku LIKE ?)";
-        const searchTerm = `%${req.query.busqueda}%`;
-        params.push(searchTerm, searchTerm);
-    }
-
-    pool.query(sql, params, (err, results) => {
-        if (err) {
-            res.status(500).json({ status: 500, message: "Ocurrió un error en la ejecución de la consulta" });
-        } else {
-            res.status(200).json({ status: 200, message: "Success", data: results });
+        if (req.query.estado) {
+            sql += " AND estado = ?";
+            params.push(req.query.estado);
         }
-    });
+
+        if (req.query.id_categoria) {
+            sql += " AND id_categoria = ?";
+            params.push(req.query.id_categoria);
+        }
+
+        if (req.query.busqueda) {
+            sql += " AND (nombre_producto LIKE ? OR sku LIKE ?)";
+            const searchTerm = `%${req.query.busqueda}%`;
+            params.push(searchTerm, searchTerm);
+        }
+
+        const [results] = await pool.query(sql, params);
+        res.status(200).json({ status: 200, message: "Success", data: results });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 500, message: "Ocurrió un error en la ejecución de la consulta" });
+    }
 });
 
 // Obtener producto por ID 
-app.get('/api/productos/:id', (req, res) => {
-    const id = req.params.id;
-    const sql = "SELECT id_producto, nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, id_categoria, id_proveedor FROM productos WHERE id_producto = ?";
+app.get('/api/productos/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const sql = `
+            SELECT id_producto, nombre_producto, descripcion, sku, 
+                   precio_compra, precio_venta, stock_minimo, estado, 
+                   id_categoria, id_proveedor 
+            FROM Productos 
+            WHERE id_producto = ?
+        `;
 
-    pool.query(sql, [id], (err, results) => {
-        if (err) {
-            res.status(500).json({ status: 500, message: "Ocurrió un error en la ejecución de la consulta" });
-        } else if (results.length === 0) {
-            res.status(404).json({ status: 404, message: "Producto no encontrado" });
-        } else {
-            res.status(200).json({ status: 200, message: "Success", data: results[0] });
+        const [results] = await pool.query(sql, [id]);
+
+        if (results.length === 0) {
+            return res.status(404).json({ status: 404, message: "Producto no encontrado" });
         }
-    });
+        
+        res.status(200).json({ status: 200, message: "Success", data: results[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 500, message: "Ocurrió un error en la ejecución de la consulta" });
+    }
 });
 
 
 // 2. ENDPOINT POST: CREAR PRODUCTO
 
 app.post('/api/productos', async (req, res) => {
+
     try {
         // 
-        const { nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id } = req.body;
+        const { nombre_producto, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, id_categoria, id_proveedor } = req.body;
+        
 
         // 2. VALIDACIONES (Retornan 400 Bad Request si fallan)
         
         // A. Validar campos obligatorios vacíos o inexistentes
-        if (!nombre || !sku || !estado) {
+        if (!nombre_producto || !sku || !estado) {
             return res.status(400).json({ 
                 error: 'Bad Request',
-                mensaje: 'Los campos nombre, sku y estado son obligatorios y no pueden estar vacíos.' 
+                mensaje: 'Los campos nombre_producto, sku y estado son obligatorios y no pueden estar vacíos.' 
             });
         }
 
@@ -106,11 +123,11 @@ app.post('/api/productos', async (req, res) => {
 
         // 3. INSERCIÓN EN BASE DE DATOS
         const query = `INSERT INTO Productos 
-                      (nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id) 
+                      (nombre_producto, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, id_categoria, id_proveedor) 
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                        
         const [resultado] = await pool.execute(query, [
-            nombre, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, category_id, provider_id
+            nombre_producto, descripcion, sku, precio_compra, precio_venta, stock_minimo, estado, id_categoria, id_proveedor
         ]);
         
         // 4. RESPUESTA DE ÉXITO (Retorna 201 Created)
@@ -127,11 +144,13 @@ app.post('/api/productos', async (req, res) => {
 });
 
 // Actualizar producto
-app.put('/api/productos/:id', (req, res) => {
+app.put('/api/productos/:id', async (req, res) => {
+
+    try {
     const id = req.params.id;
 
     const {
-        nombre,
+        nombre_producto,
         descripcion,
         sku,
         precio_compra,
@@ -144,7 +163,7 @@ app.put('/api/productos/:id', (req, res) => {
 
     const sql = `
         UPDATE productos
-        SET nombre = ?,
+        SET nombre_producto = ?,
             descripcion = ?,
             sku = ?,
             precio_compra = ?,
@@ -157,7 +176,7 @@ app.put('/api/productos/:id', (req, res) => {
     `;
 
     const params = [
-        nombre,
+        nombre_producto,
         descripcion,
         sku,
         precio_compra,
@@ -169,46 +188,43 @@ app.put('/api/productos/:id', (req, res) => {
         id
     ];
 
-    pool.query(sql, params, (err, result) => {
-        if (err) {
-            res.status(500).json({
-                status: 500,
-                message: "Ocurrio un error al actualizar el producto"
-            });
-        } else if (result.affectedRows === 0) {
-            res.status(404).json({
-                status: 404,
-                message: "Producto no encontrado"
-            });
-        } else {
-            res.status(200).json({
-                status: 200,
-                message: "Producto actualizado correctamente"
-            });
-        }
+    const [result] = await pool.execute(sql, params);
+
+    if (result.affectedRows === 0) {
+        return res.status(404).json({
+            status: 404,
+            message: "Producto no encontrado"
+        });
+    }
+
+    res.status(200).json({
+        status: 200,
+        message: "Producto actualizado correctamente"
     });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error interno del servidor al actualizar el producto' });
+    }
 });
 
+
 // Eliminacion
-app.delete('/api/productos/:id', (req, res) => {
+app.delete('/api/productos/:id', async (req, res) => {
+    try {
     const id = req.params.id;
 
     const sql = `
         UPDATE productos
-        SET estado = 'INACTIVO'
+        SET estado = 'inactivo'
         WHERE id_producto = ?
     `;
 
-    pool.query(sql, [id], (err, result) => {
-        if (err) {
-            res.status(500).json({
-                status: 500,
-                message: "Ocurrio un error al eliminar el producto"
-            });
-        } else if (result.affectedRows === 0) {
-            res.status(404).json({
+    const [result] = await pool.query(sql, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
                 status: 404,
-                message: "Producto no encontrado"
+                message: "Ocurrio un error al eliminar el producto"
             });
         } else {
             res.status(200).json({
@@ -216,7 +232,14 @@ app.delete('/api/productos/:id', (req, res) => {
                 message: "Producto eliminado correctamente"
             });
         }
-    });
+   
+    } catch (err) { 
+        console.error(err);
+        res.status(500).json({
+            status: 500,
+            message: "Ocurrio un error al eliminar el producto"
+        });
+    }
 });
 
 app.listen(PORT, () => {
